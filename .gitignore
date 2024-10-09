@@ -1,0 +1,5 @@
+# IDE/editor directories and files
+.idea/
+
+# Logs
+*.log
