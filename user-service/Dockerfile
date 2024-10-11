@@ -25,7 +25,7 @@ COPY --from=builder /app/user-service .
 RUN chmod +x user-service
 
 # Copy the environment variables, removed relying in env variables
-# COPY .env .env
+COPY .env .env
 
 # Expose the application port
 EXPOSE 8080

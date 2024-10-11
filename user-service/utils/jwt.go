@@ -9,9 +9,9 @@ import (
 
 var jwtKey = os.Getenv("JWT_KEY")
 
-func GenerateUserJWT(userID uint) (string, error) {
+func GenerateJWT(userID uint) (string, error) {
 	// Token works for a day
-	expirationTime := time.Now().Add(24 * time.Hour)
+	expirationTime := time.Now().Add(72 * time.Hour)
 
 	// Create the JWT claims, which includes the user ID and expiry time
 	claims := &jwt.RegisteredClaims{
