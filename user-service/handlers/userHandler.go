@@ -64,7 +64,10 @@ func generateStateOauthCookie(w http.ResponseWriter) string {
 	var expiration = time.Now().Add(24 * time.Hour)
 
 	b := make([]byte, 16)
-	rand.Read(b)
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
 	state := base64.URLEncoding.EncodeToString(b)
 	cookie := http.Cookie{Name: "oauthstate", Value: state, Expires: expiration}
 	http.SetCookie(w, &cookie)
@@ -75,6 +78,12 @@ func generateStateOauthCookie(w http.ResponseWriter) string {
 
 func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	log.Println("GoogleLogin invoked")
+
+	if utils.GoogleOauthConfig.ClientID == "" || utils.GoogleOauthConfig.ClientSecret == "" {
+		http.Error(w, "GitHub OAuth client ID or secret not set.", http.StatusInternalServerError)
+		return
+	}
+
 	state := generateStateOauthCookie(w)
 	url := utils.GoogleOauthConfig.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
@@ -110,11 +119,19 @@ func GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get user info", http.StatusInternalServerError)
 		return
 	}
-	defer userInfoResp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(userInfoResp.Body)
 
 	userInfoData, _ := io.ReadAll(userInfoResp.Body)
 	var userInfo map[string]interface{}
-	json.Unmarshal(userInfoData, &userInfo)
+	err = json.Unmarshal(userInfoData, &userInfo)
+	if err != nil {
+		return
+	}
 
 	// Process user info and generate JWT token
 	tokenString, err := processUserInfo(w, "google", userInfo)
@@ -125,7 +142,10 @@ func GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Send the token to the client
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	err = json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	if err != nil {
+		return
+	}
 }
 
 //#endregion
@@ -133,6 +153,11 @@ func GoogleCallback(w http.ResponseWriter, r *http.Request) {
 //#region GITHUB OAUTH
 
 func GithubLogin(w http.ResponseWriter, r *http.Request) {
+	if utils.GithubOauthConfig.ClientID == "" || utils.GithubOauthConfig.ClientSecret == "" {
+		http.Error(w, "GitHub OAuth client ID or secret not set.", http.StatusInternalServerError)
+		return
+	}
+
 	state := generateStateOauthCookie(w)
 	url := utils.GithubOauthConfig.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
@@ -167,7 +192,12 @@ func GithubCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get user info", http.StatusInternalServerError)
 		return
 	}
-	defer userInfoResp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(userInfoResp.Body)
 
 	userInfoData, _ := io.ReadAll(userInfoResp.Body)
 	var userInfo map[string]interface{}
@@ -186,7 +216,10 @@ func GithubCallback(w http.ResponseWriter, r *http.Request) {
 
 	// Send the token to the client
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	err = json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	if err != nil {
+		return
+	}
 }
 
 //#endregion
