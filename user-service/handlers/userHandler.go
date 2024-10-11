@@ -81,8 +81,51 @@ func GoogleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func GoogleCallback(w http.ResponseWriter, r *http.Request) {
+	// Retrieve state from cookie
 	log.Println("GoogleCallback invoked")
-	w.Write([]byte("Google Callback Reached"))
+	stateCookie, err := r.Cookie("oauthstate")
+	if err != nil {
+		http.Error(w, "Invalid state cookie", http.StatusBadRequest)
+		return
+	}
+	state := stateCookie.Value
+
+	// Compare the state parameter
+	if r.FormValue("state") != state {
+		http.Error(w, "Invalid OAuth state", http.StatusUnauthorized)
+		return
+	}
+
+	// Exchange code for token
+	token, err := utils.GoogleOauthConfig.Exchange(context.Background(), r.FormValue("code"))
+	if err != nil {
+		http.Error(w, "Code exchange failed", http.StatusInternalServerError)
+		return
+	}
+
+	// Retrieve user info
+	client := utils.GoogleOauthConfig.Client(context.Background(), token)
+	userInfoResp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	if err != nil {
+		http.Error(w, "Failed to get user info", http.StatusInternalServerError)
+		return
+	}
+	defer userInfoResp.Body.Close()
+
+	userInfoData, _ := io.ReadAll(userInfoResp.Body)
+	var userInfo map[string]interface{}
+	json.Unmarshal(userInfoData, &userInfo)
+
+	// Process user info and generate JWT token
+	tokenString, err := processUserInfo(w, "google", userInfo)
+	if err != nil {
+		// Errors are already handled inside processUserInfo
+		return
+	}
+
+	// Send the token to the client
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
 }
 
 //#endregion
