@@ -27,7 +27,7 @@ func processUserInfo(w http.ResponseWriter, oauthProvider string, userInfo map[s
 	name := fmt.Sprintf("%v", userInfo["name"])
 
 	var user models.User
-	err := repository.DB.Where("oauth_provider = ? AND oauth_provider_user_id = ?", oauthProvider, oauthProviderUserID).First(&user).Error
+	err := repository.DB.Where("o_auth_provider = ? AND o_auth_provider_user_id = ?", oauthProvider, oauthProviderUserID).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// User not found, create new user
