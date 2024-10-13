@@ -19,8 +19,8 @@ services:
 
   user-service:
     build:
-      context: ./user-service
-      dockerfile: Dockerfile
+      context: backend/user-service
+      dockerfile: user-service/Dockerfile
     container_name: user_service
     depends_on:
       db:
@@ -33,6 +33,22 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=postgres
       - DB_NAME=postgresdb
+
+  api-gateway:
+    build: backend/api-gateway
+    ports:
+      - "8081:8081"
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+
+  front:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api-gateway
 
 volumes:
   postgres_data:

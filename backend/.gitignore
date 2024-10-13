@@ -1,7 +1,7 @@
 # IDE/editor directories and files
-.idea/
+../.idea/
 
 # Logs
 *.log
 
-./user-service/.env
+user-service/.env
